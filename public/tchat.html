@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tchat DLive</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="chat-container">
+    <h2 style="text-align:center;">Tchat DLive</h2>
+    <div id="chat"></div>
+    <button id="clearChat" class="clear-button">🧹 Clear Tchat</button>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chat");
+    const ws = new WebSocket("ws://localhost:8080");
+    const userColors = {};
+
+    document.getElementById("clearChat").addEventListener("click", () => {
+      fetch("/clear", { method: "POST" });
+    });
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.colors) Object.assign(userColors, data.colors);
+
+      if (data.type === "clear") {
+        chatBox.innerHTML = "";
+        return;
+      }
+
+      if (data.type === "historique") {
+        data.tchat.forEach(addMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return;
+      }
+
+      if (data.type === "tchat") {
+        addMessage(data.message);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    };
+
+    function addMessage(message) {
+      const parts = message.match(/^\[(\d{2}:\d{2}:\d{2})\] (.*?): (.+)$/);
+      if (!parts) return;
+
+      const timestamp = parts[1];
+      const username = parts[2];
+      const text = parts[3];
+
+      const newMessage = document.createElement("div");
+      newMessage.classList.add("message");
+
+      if (username === "ittaq62") {
+        newMessage.innerHTML =
+          `<span class="timestamp">${timestamp}</span> ` +
+          `<span class="username ittaq62">👑 ⚔️ ${username}</span>: ` +
+          `<span class="ittaq62-message">${text}</span>`;
+      } else {
+        const color = userColors[username] || "#ffffff";
+        newMessage.innerHTML =
+          `<span class="timestamp">${timestamp}</span> ` +
+          `<span class="username username-colored" style="color:${color};">${username}</span>: ` +
+          `${text}`;
+      }
+
+      chatBox.appendChild(newMessage);
+    }
+  </script>
+</body>
+</html>
